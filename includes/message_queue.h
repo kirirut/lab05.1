@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MESSAGE_QUEUE_H
+#define MESSAGE_QUEUE_H
 #include "message.h"
 
 typedef struct {
@@ -14,3 +15,5 @@ typedef struct {
 void init_queue(message_queue* q);
 void enqueue(message_queue* q, const message* msg);
 message dequeue(message_queue* q);
+
+#endif // MESSAGE_QUEUE_H
