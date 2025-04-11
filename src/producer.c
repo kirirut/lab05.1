@@ -1,9 +1,9 @@
 #include "producer.h"
-
+#include "globals.h"
 void producer(message_queue* q, int sem_empty, int sem_fill, int sem_mutex) {
     unsigned int seed = time(NULL) ^ getpid();
 
-    for (int i = 0; i < q->queue_size; ++i) {
+    while(run) {
         sem_P(sem_empty);  // Ожидаем, пока не будет место в очереди
         sem_P(sem_mutex);  // Блокируем очередь для других производителей
 

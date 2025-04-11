@@ -81,3 +81,9 @@ void print_queue_state(message_queue* q) {
     printf("Added messages: %d, Removed messages: %d\n", q->added_messages, q->removed_messages);
     printf("Free space: %d\n", q->free_space);
 }
+void destroy_queue(message_queue* q) {
+    if (q) {
+        free(q->buffer);
+        free(q);
+    }
+}

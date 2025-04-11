@@ -14,25 +14,19 @@ pthread_t *producer_threads;
 pthread_t *consumer_threads;
 int producer_count = 0;
 int consumer_count = 0;
-
+int run=1;
 int main() {
     int queue_size;
-    
-    // Запрашиваем размер очереди у пользователя
     printf("Enter the size of the message queue: ");
     if (scanf("%d", &queue_size) != 1 || queue_size <= 0) {
         fprintf(stderr, "Invalid queue size.\n");
         exit(1);
     }
-
     message_queue q;
-    init_queue(&q, queue_size); // Инициализируем очередь с заданным размером
-    
+    init_queue(&q, queue_size); 
     init_semaphores(&q);
-
     producer_threads = malloc(sizeof(pthread_t));
     consumer_threads = malloc(sizeof(pthread_t));
-
     if (producer_threads == NULL || consumer_threads == NULL) {
         fprintf(stderr, "Memory allocation for threads failed\n");
         exit(1);
@@ -66,18 +60,19 @@ int main() {
             print_queue_state(&q);
         }
         else if (command == 'q') {
-            break;
+        run=0;
+        break;
         }
     }
 
     wait_for_threads();
-
+    
     free(producer_threads);
     free(consumer_threads);
 
     semctl(sem_empty, 0, IPC_RMID);
     semctl(sem_fill, 0, IPC_RMID);
     semctl(sem_mutex, 0, IPC_RMID);
-
+    destroy_queue(&q);
     return 0;
 }

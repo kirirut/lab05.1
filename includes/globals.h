@@ -8,5 +8,6 @@ extern pthread_t *producer_threads;
 extern pthread_t *consumer_threads;
 extern int producer_count;
 extern int consumer_count;
+extern int run;
 
 #endif

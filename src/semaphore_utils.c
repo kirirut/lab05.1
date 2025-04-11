@@ -28,7 +28,6 @@ void init_semaphores(message_queue* q) {
 }
 
 void wait_for_threads() {
-    // Ожидание завершения всех потоков
     for (int i = 0; i < producer_count; ++i) {
         pthread_join(producer_threads[i], NULL);
     }

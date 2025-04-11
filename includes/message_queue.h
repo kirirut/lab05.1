@@ -17,5 +17,6 @@ void init_queue(message_queue* q, int queue_size);
 void enqueue(message_queue* q, const message* msg);
 message dequeue(message_queue* q);
 void print_queue_state(message_queue* q);
+void destroy_queue(message_queue* q);
 
 #endif // MESSAGE_QUEUE_H
