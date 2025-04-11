@@ -14,7 +14,7 @@ uint16_t recalculate_hash(const message* msg) {
 }
 
 void consumer(message_queue* q, int sem_empty, int sem_fill, int sem_mutex) {
-    for (int i = 0; i < 10; ++i) {
+    while (q->free_space!=QUEUE_SIZE) {
         sem_P(sem_fill);  // Ожидаем, пока в очереди не появится сообщение
         sem_P(sem_mutex);  // Блокируем очередь для других потребителей
 

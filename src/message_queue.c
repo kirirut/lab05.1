@@ -31,3 +31,10 @@ message dequeue(message_queue* q) {
 
     return msg;
 }
+
+void print_queue_state(message_queue* q) {
+    printf("Queue state: Size = %d, Used = %d, Free = %d\n",
+           QUEUE_SIZE, QUEUE_SIZE - q->free_space, q->free_space);
+    printf("Added messages: %d\n", q->added_messages);
+    printf("Removed messages: %d\n", q->removed_messages);
+}

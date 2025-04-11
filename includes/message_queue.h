@@ -1,7 +1,7 @@
 #ifndef MESSAGE_QUEUE_H
 #define MESSAGE_QUEUE_H
 #include "message.h"
-
+#include <stdio.h>
 typedef struct {
     int head;
     int tail;
@@ -15,5 +15,6 @@ typedef struct {
 void init_queue(message_queue* q);
 void enqueue(message_queue* q, const message* msg);
 message dequeue(message_queue* q);
+void print_queue_state(message_queue* q);
 
 #endif // MESSAGE_QUEUE_H

@@ -3,7 +3,7 @@
 void producer(message_queue* q, int sem_empty, int sem_fill, int sem_mutex) {
     unsigned int seed = time(NULL) ^ getpid();
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i <QUEUE_SIZE; ++i) {
         sem_P(sem_empty);  // Ожидаем, пока не освободится место
         sem_P(sem_mutex);  // Блокируем очередь для других производителей
 
