@@ -10,15 +10,23 @@ void sem_P(int semid) {
 void sem_V(int semid) {
     semop(semid, &V, 1);
 }
-void init_semaphores() {
+void init_semaphores(message_queue* q) {
+    // Инициализация семафоров для динамического размера очереди
     sem_empty = semget(IPC_PRIVATE, 1, 0666 | IPC_CREAT);
     sem_fill = semget(IPC_PRIVATE, 1, 0666 | IPC_CREAT);
     sem_mutex = semget(IPC_PRIVATE, 1, 0666 | IPC_CREAT);
 
-    semctl(sem_empty, 0, SETVAL, QUEUE_SIZE);
-    semctl(sem_fill, 0, SETVAL, 0);
-    semctl(sem_mutex, 0, SETVAL, 1);
+    if (sem_empty == -1 || sem_fill == -1 || sem_mutex == -1) {
+        perror("semget error");
+        exit(1);
+    }
+
+    // Инициализация семафоров с учетом динамического размера очереди
+    semctl(sem_empty, 0, SETVAL, q->queue_size);  // Заполняем семафор "empty" значением размера очереди
+    semctl(sem_fill, 0, SETVAL, 0);               // Семафор "fill" начинается с 0
+    semctl(sem_mutex, 0, SETVAL, 1);              // Мьютекс инициализируем значением 1
 }
+
 void wait_for_threads() {
     // Ожидание завершения всех потоков
     for (int i = 0; i < producer_count; ++i) {

@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define MAX_DATA_SIZE 256
-#define QUEUE_SIZE 10
+
 
 typedef struct {
     uint8_t type;           // 1 байт

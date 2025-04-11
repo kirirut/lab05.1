@@ -14,18 +14,19 @@ uint16_t recalculate_hash(const message* msg) {
 }
 
 void consumer(message_queue* q, int sem_empty, int sem_fill, int sem_mutex) {
-    while (q->free_space!=QUEUE_SIZE) {
+    while (q->free_space != q->queue_size) {
         sem_P(sem_fill);  // Ожидаем, пока в очереди не появится сообщение
         sem_P(sem_mutex);  // Блокируем очередь для других потребителей
 
         // Проверяем, если очередь пуста, то выходим из цикла
-        if (q->free_space == QUEUE_SIZE) {
+        if (q->free_space == q->queue_size) {
             sem_V(sem_mutex);
             break;  // Прерываем цикл, если очередь пуста
         }
 
         message msg = dequeue(q);
-        int count = q->removed_messages;
+        
+        int count = q->removed_messages;  // Считаем количество удаленных сообщений
 
         sem_V(sem_mutex);  // Освобождаем очередь
 

@@ -8,6 +8,7 @@
 #include "consumer.h"
 #include "semaphore_utils.h"
 #include "globals.h"
+
 int sem_empty, sem_fill, sem_mutex;
 pthread_t *producer_threads;
 pthread_t *consumer_threads;
@@ -15,13 +16,20 @@ int producer_count = 0;
 int consumer_count = 0;
 
 int main() {
+    int queue_size;
+    
+    // Запрашиваем размер очереди у пользователя
+    printf("Enter the size of the message queue: ");
+    if (scanf("%d", &queue_size) != 1 || queue_size <= 0) {
+        fprintf(stderr, "Invalid queue size.\n");
+        exit(1);
+    }
+
     message_queue q;
-    init_queue(&q);
+    init_queue(&q, queue_size); // Инициализируем очередь с заданным размером
+    
+    init_semaphores(&q);
 
-    // Инициализация семафоров
-    init_semaphores();
-
-    // Изначально выделяем память для одного потока
     producer_threads = malloc(sizeof(pthread_t));
     consumer_threads = malloc(sizeof(pthread_t));
 
@@ -43,21 +51,18 @@ int main() {
         if (command == '\n') continue;
 
         if (command == 'p') {
-            // Расширяем массив потоков, если необходимо
             expand_thread_arrays();
-            // Создание нового производителя
+            
             pthread_create(&producer_threads[producer_count], NULL, (void*)producer, &q);
             producer_count++;
         }
         else if (command == 'c') {
-            // Расширяем массив потоков, если необходимо
             expand_thread_arrays();
-            // Создание нового потребителя
+            
             pthread_create(&consumer_threads[consumer_count], NULL, (void*)consumer, &q);
             consumer_count++;
         }
         else if (command == 's') {
-            // Вывод состояния очереди
             print_queue_state(&q);
         }
         else if (command == 'q') {
@@ -67,11 +72,9 @@ int main() {
 
     wait_for_threads();
 
-    // Освобождение памяти под потоки
     free(producer_threads);
     free(consumer_threads);
 
-    // Удаление семафоров
     semctl(sem_empty, 0, IPC_RMID);
     semctl(sem_fill, 0, IPC_RMID);
     semctl(sem_mutex, 0, IPC_RMID);
