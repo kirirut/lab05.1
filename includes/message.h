@@ -1,9 +1,10 @@
 #pragma once
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>  
 
 #define MAX_DATA_SIZE 256
-
+#define delimeter ----------------------------------------------
 
 typedef struct {
     uint8_t type;           // 1 байт

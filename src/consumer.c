@@ -25,8 +25,13 @@ void consumer(message_queue* q, int sem_empty, int sem_fill, int sem_mutex) {
         }
 
         message msg = dequeue(q);
-        
         int count = q->removed_messages;  // Считаем количество удаленных сообщений
+
+        // Проверка на необходимость уменьшения размера очереди
+        if (q->shrink_requested && q->free_space >= (q->queue_size - q->new_size)) {
+            resize_queue(q, q->new_size);
+            q->shrink_requested = 0;
+        }
 
         sem_V(sem_mutex);  // Освобождаем очередь
 

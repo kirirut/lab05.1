@@ -22,11 +22,14 @@ int main() {
         fprintf(stderr, "Invalid queue size.\n");
         exit(1);
     }
+
     message_queue q;
     init_queue(&q, queue_size); 
     init_semaphores(&q);
-    producer_threads = malloc(sizeof(pthread_t));
-    consumer_threads = malloc(sizeof(pthread_t));
+
+    producer_threads = malloc(sizeof(pthread_t));  // Выделяем память на 1 поток (в дальнейшем будет расширяться)
+    consumer_threads = malloc(sizeof(pthread_t));  // Выделяем память на 1 поток (в дальнейшем будет расширяться)
+
     if (producer_threads == NULL || consumer_threads == NULL) {
         fprintf(stderr, "Memory allocation for threads failed\n");
         exit(1);
@@ -36,23 +39,23 @@ int main() {
     printf("  'p' - create producer\n");
     printf("  'c' - create consumer\n");
     printf("  's' - show queue status\n");
+    printf("  '+' - +1 place\n");
+    printf("  '-' - -1 place\n");
     printf("  'q' - quit\n");
 
     char command;
 
-    while (1) {
+    while (run) {
         command = getchar();
         if (command == '\n') continue;
 
         if (command == 'p') {
             expand_thread_arrays();
-            
             pthread_create(&producer_threads[producer_count], NULL, (void*)producer, &q);
             producer_count++;
         }
         else if (command == 'c') {
             expand_thread_arrays();
-            
             pthread_create(&consumer_threads[consumer_count], NULL, (void*)consumer, &q);
             consumer_count++;
         }
@@ -60,13 +63,25 @@ int main() {
             print_queue_state(&q);
         }
         else if (command == 'q') {
-        run=0;
-        break;
+            run = 0;
+            break;
+        }
+        else if (command == '+') {
+            int new_size = q.queue_size + 1;
+            resize_queue(&q, new_size);
+        }
+        else if (command == '-') {
+            if (q.queue_size > q.free_space + 1) {
+                int new_size = q.queue_size - 1;
+                request_shrink_queue(&q, new_size);
+            } else {
+                printf("Cannot shrink: too many elements in queue\n");
+            }
         }
     }
 
     wait_for_threads();
-    
+
     free(producer_threads);
     free(consumer_threads);
 
@@ -74,5 +89,6 @@ int main() {
     semctl(sem_fill, 0, IPC_RMID);
     semctl(sem_mutex, 0, IPC_RMID);
     destroy_queue(&q);
+
     return 0;
 }

@@ -10,13 +10,20 @@ typedef struct {
     int removed_messages;
     int free_space;
     int queue_size;
-    message *buffer; 
+    message *buffer;
+
+    int shrink_requested;
+    int new_size;
 } message_queue;
+
 
 void init_queue(message_queue* q, int queue_size);
 void enqueue(message_queue* q, const message* msg);
 message dequeue(message_queue* q);
 void print_queue_state(message_queue* q);
 void destroy_queue(message_queue* q);
+void request_shrink_queue(message_queue *q, int new_size);
+void resize_queue(message_queue *q, int new_size);
+
 
 #endif // MESSAGE_QUEUE_H
