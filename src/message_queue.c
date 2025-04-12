@@ -1,13 +1,11 @@
 #include "message_queue.h"
 #include "semaphore_utils.h"
-// Инициализация очереди
+
 void init_queue(message_queue* q, int queue_size) {
-    // Проверка на корректность размера
     if (queue_size <= 0) {
         fprintf(stderr, "Queue size must be greater than 0.\n");
         exit(1);
     }
-
     q->head = 0;
     q->tail = 0;
     q->added_messages = 0;
@@ -18,64 +16,39 @@ void init_queue(message_queue* q, int queue_size) {
     q->new_size=queue_size;
     q->buffer = (message*)malloc(queue_size * sizeof(message));
     if (q->buffer == NULL) {
-        // Обработка ошибки выделения памяти
         fprintf(stderr, "Error allocating memory for the message queue.\n");
         exit(1);
     }
-
     printf("Queue initialized with size %d\n", queue_size);
 }
-
-// Очередь (добавление сообщения)
 void enqueue(message_queue* q, const message* msg) {
-    // Захватываем мьютекс
     sem_P(sem_mutex);
-
-    // Если очередь полна, ждем освобождения места
     if (q->free_space == 0) {
-        sem_V(sem_empty);  // Поставим семафор в состоянии ожидания, пока не появится место
-        sem_P(sem_mutex);  // Захватываем мьютекс снова
+        sem_V(sem_empty);  
+        sem_P(sem_mutex); 
     }
-
-    // Добавляем сообщение в очередь
     q->buffer[q->tail] = *msg;
     q->added_messages++;
     q->tail = (q->tail + 1) % q->queue_size;
     q->free_space--;
-
-    // Увеличиваем количество занятых мест
     sem_V(sem_fill);
-
-    // Освобождаем мьютекс
     sem_V(sem_mutex);
 }
 
 message dequeue(message_queue* q) {
-    // Захватываем мьютекс
     sem_P(sem_mutex);
-
-    // Если очередь пуста, ждем появления новых сообщений
     if (q->free_space == q->queue_size) {
-        sem_V(sem_fill);  // Ожидаем заполнения очереди
-        sem_P(sem_mutex);  // Захватываем мьютекс снова
+        sem_V(sem_fill); 
+        sem_P(sem_mutex);  
     }
-
-    // Извлекаем сообщение из очереди
     message msg = q->buffer[q->head];
     q->head = (q->head + 1) % q->queue_size;
     q->free_space++;
     q->removed_messages++;
-
-    // Уменьшаем количество свободных мест
     sem_V(sem_empty);
-
-    // Освобождаем мьютекс
     sem_V(sem_mutex);
-
     return msg;
 }
-
-// Печать состояния очереди (для отладки)
 void print_queue_state(message_queue* q) {
     printf("________________________________________\n");
     printf("Queue state:\n");

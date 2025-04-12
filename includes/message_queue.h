@@ -26,4 +26,4 @@ void request_shrink_queue(message_queue *q, int new_size);
 void resize_queue(message_queue *q, int new_size);
 
 
-#endif // MESSAGE_QUEUE_H
+#endif 

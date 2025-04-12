@@ -17,4 +17,4 @@ void sem_V(int semid);
 void init_semaphores(message_queue* q);
 void wait_for_threads();
 void expand_thread_arrays();
-#endif // SEMAPHORE_UTILS_H
+#endif 
