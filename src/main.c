@@ -27,9 +27,8 @@ int main() {
     init_queue(&q, queue_size); 
     init_semaphores(&q);
 
-    producer_threads = malloc(sizeof(pthread_t));  //  на 1 поток 
-    consumer_threads = malloc(sizeof(pthread_t));  //  на 1 поток 
-
+    producer_threads = malloc(sizeof(pthread_t));  
+    consumer_threads = malloc(sizeof(pthread_t));  
     if (producer_threads == NULL || consumer_threads == NULL) {
         fprintf(stderr, "Memory allocation for threads failed\n");
         exit(1);
