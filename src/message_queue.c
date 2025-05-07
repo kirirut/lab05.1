@@ -55,8 +55,8 @@ void print_queue_state(message_queue* q) {
     printf("Head: %d, Tail: %d\n", q->head, q->tail);
     printf("Added messages: %d, Removed messages: %d\n", q->added_messages, q->removed_messages);
     printf("Free space: %d\n", q->free_space);
-    printf("Old queue size: %d\n", q->queue_size);
-    printf("New queue size: %d\n", q->new_size);
+    printf("New queue size: %d\n", q->queue_size);
+    printf("Old queue size: %d\n", q->new_size);
     printf("________________________________________\n");
 }
 void destroy_queue(message_queue* q) {

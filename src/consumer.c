@@ -35,6 +35,6 @@ void consumer(message_queue* q, int sem_empty, int sem_fill, int sem_mutex) {
                is_valid ? "OK" : "CORRUPTED");
         fflush(stdout);
         sem_V(sem_empty); 
-        sleep(1);  
+        sleep(3);  
     }
 }
