@@ -1,38 +1,25 @@
-#include <pthread.h>
+#include "queue.h"
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/sem.h>
 #include <stdlib.h>
-#include "message_queue.h"
-#include "producer.h"
-#include "consumer.h"
-#include "semaphore_utils.h"
-#include "globals.h"
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-int sem_empty, sem_fill, sem_mutex;
-pthread_t *producer_threads;
-pthread_t *consumer_threads;
-int producer_count = 0;
-int consumer_count = 0;
-int run=1;
 int main() {
-    int queue_size;
-    printf("Enter the size of the message queue: ");
-    if (scanf("%d", &queue_size) != 1 || queue_size <= 0) {
-        fprintf(stderr, "Invalid queue size.\n");
-        exit(1);
-    }
+    Queue queue;
+    init_queue(&queue, 10);
 
-    message_queue q;
-    init_queue(&q, queue_size); 
-    init_semaphores(&q);
+    pthread_t producers[MAX_THREADS];
+    pthread_t consumers[MAX_THREADS];
+    int num_producers = 0;
+    int num_consumers = 0;
 
-    producer_threads = malloc(sizeof(pthread_t));  
-    consumer_threads = malloc(sizeof(pthread_t));  
-    if (producer_threads == NULL || consumer_threads == NULL) {
-        fprintf(stderr, "Memory allocation for threads failed\n");
-        exit(1);
-    }
+    struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
     printf("Message queue created. Press:\n");
     printf("  'p' - create producer\n");
@@ -42,52 +29,56 @@ int main() {
     printf("  '-' - -1 place\n");
     printf("  'q' - quit\n");
 
-    char command;
+    int ch;
+    while (1) {
+        ch = getchar();
+        if (ch == EOF || ch == '\n') {
+            struct timespec ts = {0, 10000000};
+            nanosleep(&ts, NULL);
+            continue;
+        }
 
-    while (run) {
-        command = getchar();
-        if (command == '\n') continue;
-
-        if (command == 'p') {
-            expand_thread_arrays();
-            pthread_create(&producer_threads[producer_count], NULL, (void*)producer, &q);
-            producer_count++;
-        }
-        else if (command == 'c') {
-            expand_thread_arrays();
-            pthread_create(&consumer_threads[consumer_count], NULL, (void*)consumer, &q);
-            consumer_count++;
-        }
-        else if (command == 's') {
-            print_queue_state(&q);
-        }
-        else if (command == 'q') {
-            run = 0;
+        if (ch == 'p' && num_producers < MAX_THREADS) {
+            pthread_t thread;
+            pthread_create(&thread, NULL, producer, &queue);
+            pthread_detach(thread);
+            producers[num_producers++] = thread;
+        } else if (ch == 'c' && num_consumers < MAX_THREADS) {
+            pthread_t thread;
+            pthread_create(&thread, NULL, consumer, &queue);
+            pthread_detach(thread);
+            consumers[num_consumers++] = thread;
+        } else if (ch == 'P' && num_producers > 0) {
+            pthread_cancel(producers[--num_producers]);
+        } else if (ch == 'C' && num_consumers > 0) {
+            pthread_cancel(consumers[--num_consumers]);
+        } else if (ch == 's') {
+            pthread_mutex_lock(&queue.mutex);
+            int capacity = queue.capacity;
+            int occupied = capacity - queue.free_space;
+            int free_space = queue.free_space;
+            int added = queue.added_count;
+            int removed = queue.removed_count;
+            pthread_mutex_unlock(&queue.mutex);
+            printf("Queue size: %d, occupied: %d, free: %d, added: %d, removed: %d, producers: %d, consumers: %d\n",
+                   capacity, occupied, free_space, added, removed, num_producers, num_consumers);
+        } else if (ch == '+') {
+            resize_queue(&queue, queue.capacity + 1);
+        } else if (ch == '-') {
+            if (queue.capacity > 1) resize_queue(&queue, queue.capacity - 1);
+        } else if (ch == 'q') {
             break;
-        }
-        else if (command == '+') {
-            int new_size = q.queue_size + 1;
-            resize_queue(&q, new_size);
-        }
-        else if (command == '-') {
-            if (q.queue_size > q.free_space + 1) {
-                int new_size = q.queue_size - 1;
-                request_shrink_queue(&q, new_size);
-            } else {
-                printf("Cannot shrink: too many elements in queue\n");
-            }
         }
     }
 
-    wait_for_threads();
-
-    free(producer_threads);
-    free(consumer_threads);
-
-    semctl(sem_empty, 0, IPC_RMID);
-    semctl(sem_fill, 0, IPC_RMID);
-    semctl(sem_mutex, 0, IPC_RMID);
-    destroy_queue(&q);
-
+    for (int i = 0; i < num_producers; i++) pthread_cancel(producers[i]);
+    for (int i = 0; i < num_consumers; i++) pthread_cancel(consumers[i]);
+    struct timespec ts = {0, 200000000};
+    nanosleep(&ts, NULL);
+    pthread_mutex_destroy(&queue.mutex);
+    sem_destroy(&queue.empty);
+    sem_destroy(&queue.full);
+    free(queue.messages);
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     return 0;
 }

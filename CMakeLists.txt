@@ -14,10 +14,9 @@ include_directories(includes)
 set(SOURCES
     src/main.c
     src/message.c
-    src/message_queue.c
-    src/producer.c
+    src/queue.c
     src/consumer.c
-    src/semaphore_utils.c
+    src/producer.c
 )
 
 # Create the executable

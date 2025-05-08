@@ -1,38 +1,39 @@
-#include "producer.h"
-#include "globals.h"
-void producer(message_queue* q, int sem_empty, int sem_fill, int sem_mutex) {
-    unsigned int seed = time(NULL) ^ getpid();
-    while(run) {
-        sem_P(sem_empty);  
-        sem_P(sem_mutex);  
+#include "queue.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
-        
-        if (q->shrink_requested && q->free_space >= (q->queue_size - q->new_size)) {
-            resize_queue(q, q->new_size); 
-            q->shrink_requested = 0;    
+void* producer(void* arg) {
+    Queue* queue = (Queue*)arg;
+    unsigned int seed = time(NULL) ^ pthread_self();
+
+    while (1) {
+        Message msg;
+        msg.type = rand_r(&seed) % 256;
+        msg.size = rand_r(&seed) % 256;
+        for (int i = 0; i < msg.size; i++) {
+            msg.data[i] = rand_r(&seed) % 256;
         }
+        msg.hash = compute_hash(&msg);
 
-      
-        if (q->free_space == 0) {
-            sem_V(sem_mutex); 
-            sem_V(sem_empty); 
-            break; 
-        }
+        sem_wait(&queue->empty);
+        pthread_mutex_lock(&queue->mutex);
 
-        message msg;
-        generate_message(&msg, &seed);
-        enqueue(q, &msg);  
+        memcpy(&queue->messages[queue->tail], &msg, sizeof(Message));
+        queue->tail = (queue->tail + 1) % queue->capacity;
+        queue->added_count++;
+        queue->free_space--;
+        int added = queue->added_count;
 
-        int count = q->added_messages; 
-        sem_V(sem_mutex); 
+        pthread_mutex_unlock(&queue->mutex);
+        sem_post(&queue->full);
 
-       
-        printf("Produced message %d: type=%d, size=%d, hash=%u\n",
-               count, msg.type, msg.size, msg.hash);
-        fflush(stdout);
-
-       
-        sem_V(sem_fill);  
-        sleep(3); 
+        printf("Produced message %d: type=%u, size=%u, hash=%u\n", 
+               added, msg.type, msg.size, msg.hash);
+        struct timespec ts = {2, 0}; // 2 seconds delay
+        nanosleep(&ts, NULL);
     }
+    return NULL;
 }
