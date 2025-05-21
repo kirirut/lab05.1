@@ -4,12 +4,20 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <signal.h>
+
+extern volatile sig_atomic_t running;
 
 void* producer(void* arg) {
     Queue* queue = (Queue*)arg;
     unsigned int seed = time(NULL) ^ pthread_self();
 
-    while (1) {
+    while (running) {
         Message msg;
         msg.type = rand_r(&seed) % 256;
         msg.size = rand_r(&seed) % 256;
@@ -18,7 +26,7 @@ void* producer(void* arg) {
         }
         msg.hash = compute_hash(&msg);
 
-        sem_wait(&queue->empty);
+        if (sem_wait(&queue->empty) == -1) break; // безопасный выход
         pthread_mutex_lock(&queue->mutex);
 
         memcpy(&queue->messages[queue->tail], &msg, sizeof(Message));
@@ -32,8 +40,10 @@ void* producer(void* arg) {
 
         printf("Produced message %d: type=%u, size=%u, hash=%u\n", 
                added, msg.type, msg.size, msg.hash);
-        struct timespec ts = {2, 0}; // 2 seconds delay
+
+        struct timespec ts = {2, 0};
         nanosleep(&ts, NULL);
     }
+
     return NULL;
 }

@@ -4,6 +4,13 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
+
+volatile sig_atomic_t running = 1;
+
+void stop_running(int sig) {
+    running = 0;
+}
 
 int main() {
     Queue queue;
@@ -13,6 +20,8 @@ int main() {
     pthread_t consumers[MAX_THREADS];
     int num_producers = 0;
     int num_consumers = 0;
+
+    signal(SIGINT, stop_running); // Ctrl+C обработчик
 
     struct termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
@@ -30,7 +39,7 @@ int main() {
     printf("  'q' - quit\n");
 
     int ch;
-    while (1) {
+    while (running) {
         ch = getchar();
         if (ch == EOF || ch == '\n') {
             struct timespec ts = {0, 10000000};
@@ -39,19 +48,9 @@ int main() {
         }
 
         if (ch == 'p' && num_producers < MAX_THREADS) {
-            pthread_t thread;
-            pthread_create(&thread, NULL, producer, &queue);
-            pthread_detach(thread);
-            producers[num_producers++] = thread;
+            pthread_create(&producers[num_producers++], NULL, producer, &queue);
         } else if (ch == 'c' && num_consumers < MAX_THREADS) {
-            pthread_t thread;
-            pthread_create(&thread, NULL, consumer, &queue);
-            pthread_detach(thread);
-            consumers[num_consumers++] = thread;
-        } else if (ch == 'P' && num_producers > 0) {
-            pthread_cancel(producers[--num_producers]);
-        } else if (ch == 'C' && num_consumers > 0) {
-            pthread_cancel(consumers[--num_consumers]);
+            pthread_create(&consumers[num_consumers++], NULL, consumer, &queue);
         } else if (ch == 's') {
             pthread_mutex_lock(&queue.mutex);
             int capacity = queue.capacity;
@@ -67,18 +66,19 @@ int main() {
         } else if (ch == '-') {
             if (queue.capacity > 1) resize_queue(&queue, queue.capacity - 1);
         } else if (ch == 'q') {
-            break;
+            running = 0;
         }
     }
 
-    for (int i = 0; i < num_producers; i++) pthread_cancel(producers[i]);
-    for (int i = 0; i < num_consumers; i++) pthread_cancel(consumers[i]);
-    struct timespec ts = {0, 200000000};
-    nanosleep(&ts, NULL);
+    // Дожидаемся завершения потоков
+    for (int i = 0; i < num_producers; i++) pthread_join(producers[i], NULL);
+    for (int i = 0; i < num_consumers; i++) pthread_join(consumers[i], NULL);
+
     pthread_mutex_destroy(&queue.mutex);
     sem_destroy(&queue.empty);
     sem_destroy(&queue.full);
     free(queue.messages);
+
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     return 0;
 }

@@ -2,12 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <signal.h>
+
+extern volatile sig_atomic_t running;
 
 void* consumer(void* arg) {
     Queue* queue = (Queue*)arg;
 
-    while (1) {
-        sem_wait(&queue->full);
+    while (running) {
+        if (sem_wait(&queue->full) == -1) break; // безопасный выход
         pthread_mutex_lock(&queue->mutex);
 
         Message msg;
@@ -25,8 +33,9 @@ void* consumer(void* arg) {
                removed, msg.type, msg.size, msg.hash,
                (computed_hash == msg.hash) ? "OK" : "ERROR");
 
-        struct timespec ts = {2, 0}; // 2 seconds delay
+        struct timespec ts = {2, 0};
         nanosleep(&ts, NULL);
     }
+
     return NULL;
 }
